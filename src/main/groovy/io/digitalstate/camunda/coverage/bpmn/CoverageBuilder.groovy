@@ -5,6 +5,7 @@ import io.digitalstate.camunda.coverage.bpmn.bpmnjs.TemplateGeneration
 import org.camunda.bpm.engine.history.HistoricDetail
 import org.camunda.bpm.engine.runtime.ProcessInstance
 import org.camunda.bpm.model.bpmn.Bpmn
+import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.FlowNode
 import org.camunda.bpm.model.bpmn.instance.IntermediateCatchEvent
 import org.camunda.bpm.model.bpmn.instance.ReceiveTask
@@ -57,14 +58,9 @@ trait CoverageBuilder implements TemplateGeneration{
         }
     }
 
-    static CoverageData generateCoverageData(ProcessInstance processInstance, String coverageDataName = null, Integer coverageDataWeight = 0){
-        CoverageData coverageData = new CoverageData()
-        coverageData.name = coverageDataName
-        coverageData.weight = coverageDataWeight
-
+    Map<String, Integer> getActivityEvents(ProcessInstance processInstance){
         String processInstanceId = processInstance.getProcessInstanceId()
 
-        // Get Activity Events
         def events = historyService()
                 .createHistoricActivityInstanceQuery()
                 .processInstanceId(processInstanceId)
@@ -75,9 +71,12 @@ trait CoverageBuilder implements TemplateGeneration{
         def activityEvents = events.findAll {it.activityType != 'sequenceFlow' && it.activityType != 'multiInstanceBody'}
                 .collect {it.activityId}
                 .countBy {it}
-        coverageData.activityInstancesFinished = activityEvents
+        return activityEvents
+    }
 
-        // Activity Events That are still active
+    List<String> getUnfinishedActivityEvents(ProcessInstance processInstance){
+        String processInstanceId = processInstance.getProcessInstanceId()
+
         def eventsStillActive = historyService()
                 .createHistoricActivityInstanceQuery()
                 .processInstanceId(processInstanceId)
@@ -87,11 +86,29 @@ trait CoverageBuilder implements TemplateGeneration{
                 .list()
         def activityEventsStillActive = eventsStillActive.findAll {it.activityType != 'sequenceFlow'}
                 .collect {it.activityId}
-        coverageData.activityInstancesUnfinished = activityEventsStillActive
 
-        def sequenceFlows = events.findAll  {it.activityType == 'sequenceFlow'}
-                .collect {it.activityId}
-        coverageData.sequenceFlowsFinished = sequenceFlows
+        return activityEventsStillActive
+    }
+
+    List<String> getFinishedSequenceFlows(ProcessInstance processInstance){
+        String processInstanceId = processInstance.getProcessInstanceId()
+
+        def events = historyService()
+                .createHistoricActivityInstanceQuery()
+                .processInstanceId(processInstanceId)
+                .finished()
+                .activityType('sequenceFlow')
+                .orderPartiallyByOccurrence()
+                .asc()
+                .list()
+
+        List<String> sequenceFlows = events.collect {it.activityId}
+
+        return sequenceFlows
+    }
+
+    BpmnModelInstance getBpmnModelInstanceFromDb(ProcessInstance processInstance){
+        String processInstanceId = processInstance.getProcessInstanceId()
 
         String processDefinitionId = historyService()
                 .createHistoricProcessInstanceQuery()
@@ -99,54 +116,79 @@ trait CoverageBuilder implements TemplateGeneration{
                 .singleResult()
                 .getProcessDefinitionId()
 
-        def model = repositoryService()
-                .getBpmnModelInstance(processDefinitionId)
+        BpmnModelInstance model = repositoryService().getBpmnModelInstance(processDefinitionId)
+        return model
+    }
 
-        def asyncData = model.getModelElementsByType(FlowNode.class).collect {[
+    List<Map<String,Object>> getAsyncConfigsFromModel(BpmnModelInstance bpmnModelInstance){
+        def asyncData = bpmnModelInstance.getModelElementsByType(FlowNode.class).collect {[
                 'id': it.getId(),
                 'asyncBefore': it.isCamundaAsyncBefore().toBoolean(),
                 'asyncAfter': it.isCamundaAsyncAfter().toBoolean(),
                 'exclusive': it.isCamundaExclusive().toBoolean()
         ]}
-        coverageData.modelAsyncData = asyncData
+        return asyncData
+    }
 
-        def userTasks =  model.getModelElementsByType(UserTask.class).collect {it.getId()}
-        coverageData.modelUserTasks = userTasks
+    List<String> getUserTasksFromModel(BpmnModelInstance bpmnModelInstance){
+        bpmnModelInstance.getModelElementsByType(UserTask.class).collect {it.getId()}
+    }
+    List<String> getReceiveTasksFromModel(BpmnModelInstance bpmnModelInstance){
+        bpmnModelInstance.getModelElementsByType(ReceiveTask.class).collect {it.getId()}
+    }
+    List<String> getExternalTasksFromModel(BpmnModelInstance bpmnModelInstance){
+        bpmnModelInstance.getModelElementsByType(ServiceTask.class).findAll {it.getCamundaType() == 'external'}.collect {it.getId()}
+    }
+    List<String> getIntermediateCatchEventsFromModel(BpmnModelInstance bpmnModelInstance){
+        bpmnModelInstance.getModelElementsByType(IntermediateCatchEvent.class).collect {it.getId()}
+    }
 
-        def receiveTasks =  model.getModelElementsByType(ReceiveTask.class).collect {it.getId()}
-        coverageData.modelReceiveTasks = receiveTasks
+    String convertBpmnModelInstanceToJsReadyString(BpmnModelInstance bpmnModelInstance){
+        StringEscapeUtils.escapeJavaScript(Bpmn.convertToString(bpmnModelInstance))
+    }
 
-        def externalTasks =  model.getModelElementsByType(ServiceTask.class).findAll {it.getCamundaType() == 'external'}.collect {it.getId()}
-        coverageData.modelExternalTasks = externalTasks
+    List<Map<String, Object>> getVariableActivityFromDb(ProcessInstance processInstance){
+        String processInstanceId = processInstance.getProcessInstanceId()
 
-        def intermediateCatchEvents =  model.getModelElementsByType(IntermediateCatchEvent.class).collect {it.getId()}
-
-        coverageData.modelIntermediateCatchEvents = intermediateCatchEvents
-
-        coverageData.bpmnModel = StringEscapeUtils.escapeJavaScript(Bpmn.convertToString(model))
-
-
-//      Generate Variable Usage / Dataflow data
         Collection<HistoricDetail> variableHistory = historyService().createHistoricDetailQuery()
-                .processInstanceId(processInstanceId)
-                .disableBinaryFetching()
-                .variableUpdates()
-                .list()
+                                                                    .processInstanceId(processInstanceId)
+                                                                    .disableBinaryFetching()
+                                                                    .variableUpdates()
+                                                                    .list()
 
         ArrayList<Map<String, Object>> activityVariableMappings = variableHistory.collect { historyItem ->
             [('activityId'): historyService().createHistoricActivityInstanceQuery()
-                    .processInstanceId(processInstanceId)
-                    .activityInstanceId(historyItem.getActivityInstanceId())
-                    .singleResult().getActivityId(),
+                                            .processInstanceId(processInstanceId)
+                                            .activityInstanceId(historyItem.getActivityInstanceId())
+                                            .singleResult()
+                                            .getActivityId(),
              ('variableInstance') : historyItem.toString()
             ]
         }
-        coverageData.activityInstanceVariableMapping = activityVariableMappings
+        return activityVariableMappings
+    }
+
+    CoverageData generateCoverageData(ProcessInstance processInstance, String coverageDataName = null, Integer coverageDataWeight = 0){
+        CoverageData coverageData = new CoverageData()
+        coverageData.name = coverageDataName
+        coverageData.weight = coverageDataWeight
+        coverageData.activityInstancesFinished = getActivityEvents(processInstance)
+        coverageData.activityInstancesUnfinished = getUnfinishedActivityEvents(processInstance)
+        coverageData.sequenceFlowsFinished = getFinishedSequenceFlows(processInstance)
+
+        BpmnModelInstance model = getBpmnModelInstanceFromDb(processInstance)
+        coverageData.modelAsyncData = getAsyncConfigsFromModel(model)
+        coverageData.modelUserTasks = getUserTasksFromModel(model)
+        coverageData.modelReceiveTasks = getReceiveTasksFromModel(model)
+        coverageData.modelExternalTasks = getExternalTasksFromModel(model)
+        coverageData.modelIntermediateCatchEvents = getIntermediateCatchEventsFromModel(model)
+        coverageData.bpmnModel = convertBpmnModelInstanceToJsReadyString(model)
+        coverageData.activityInstanceVariableMapping = getVariableActivityFromDb(processInstance)
 
         return coverageData
     }
 
-   def compileTemplate(CoverageData coverageData){
+   String compileTemplate(CoverageData coverageData){
        def head = generateTemplateHead()
        def body = generateTemplateBody(
                "${UUID.randomUUID().toString().replaceAll("\\W", "")}", // Creates a UUID for the coverage name for uniqueness and removes all hyphens
