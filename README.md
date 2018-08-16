@@ -43,6 +43,25 @@ Grey Box with Number = Occurrence Count (Used to show where activity's have loop
 1. Camunda History logging should be set to "Full".  The Camunda History service is used to query the Camunda DB for the various data needed to generate coverage.
 
 
+# Coverage
+
+The following coverage items are currently covered by this tool:
+
+| Coverage Item | Notes         |
+| ------------- | ------------- |
+| Finished Activity Instances | Shows which activities were successfully executed and completed. |
+| Unfinished Activity Instances | Shows which activities remained active; this means the activities were started, but did not complete, and did not throw a error |
+| Finished Sequence Flows | Shows sequence flow completion, allowing tracking of specific sequence flow pathways |
+| BPMN Model Async Flag: Before/After Async, Exclusive | Shows which activities have a Async Before, Async After, and Exclusive configuration in the BPMN Model |
+| User Tasks Async Flag | Shows a marker for each User Task to indicate the User Tasks async nature; this is a different marker than the BPMN Model Async Flag |
+| External Task Async Flag | Shows a marker for each Service Task with a 'External' implementation, to indicate the Service Task's async nature; this is a different marker than the BPMN Model Async Flag |
+| Receive Task Async Flag | Shows a marker for each Receive Task, to indicate the Task's async nature; this is a different marker than the BPMN Model Async Flag |
+| Intermediate Catch Events Async Flag | Shows a marker for each Intermediate Catch Event. to indicate the event's async nature; this is different than the BPMN Model Async Flag |
+| Variable instance activity | Shows a icon where activities have created, modified, or deleted a Variable during execution |
+| Activity Occurrence/Instance Counts | Shows Counts under each executed activity to show the number of times a activity was executed.  Typically used to visualize loops and multi-instance scenarios within a BPMN. |
+
+Each coverage item can have its look-and-feel modified through a change in the rendering templates: head.html, body.html, and footer.html.
+
 # Usage
 
 | Method     | Usage       | Notes      |
