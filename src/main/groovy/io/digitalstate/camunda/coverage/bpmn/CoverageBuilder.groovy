@@ -1,0 +1,175 @@
+package io.digitalstate.camunda.coverage.bpmn
+
+import groovy.json.StringEscapeUtils
+import io.digitalstate.camunda.coverage.bpmn.bpmnjs.TemplateGeneration
+import org.camunda.bpm.engine.history.HistoricDetail
+import org.camunda.bpm.engine.runtime.ProcessInstance
+import org.camunda.bpm.model.bpmn.Bpmn
+import org.camunda.bpm.model.bpmn.instance.FlowNode
+import org.camunda.bpm.model.bpmn.instance.IntermediateCatchEvent
+import org.camunda.bpm.model.bpmn.instance.ReceiveTask
+import org.camunda.bpm.model.bpmn.instance.ServiceTask
+import org.camunda.bpm.model.bpmn.instance.UserTask
+import static groovy.json.JsonOutput.toJson
+import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.historyService
+import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.repositoryService
+
+trait CoverageBuilder implements TemplateGeneration{
+
+    static HashMap<String, CoverageData> coverageSnapshots = [:]
+
+    void coverageSnapshot(ProcessInstance processInstance, String coverageDataName = UUID.randomUUID(), Integer coverageDataWeight = 0){
+        CoverageData coverageData = generateCoverageData(processInstance, coverageDataName, coverageDataWeight)
+        coverageSnapshots.put(coverageDataName, coverageData)
+    }
+
+    void saveCoverageSnapshots(HashMap<String, CoverageData> data = coverageSnapshots, String buildDir = 'target') {
+        FileTreeBuilder treeBuilder = new FileTreeBuilder()
+
+        data.eachWithIndex { key, value, index ->
+            // Generate the compiled template using the CoverageData
+            String output = compileTemplate(value)
+            // Determine if the coverage data name is a UUID of a custom name
+            Closure<Boolean> isUUID = {
+                try {
+                    UUID.fromString(value.name)
+                    return true
+                } catch(all) {
+                    return false
+                }
+            }
+            // Setup the file name based on whether the coverage data name is a UUID
+            Closure<String> fileName = {
+                if (isUUID()) {
+                    return "${index}.html"
+                } else {
+                    return "${index}_${key}.html"
+                }
+            }
+            // Generate the file output for the coverage
+            treeBuilder {
+                "${buildDir}" {
+                    "bpmn-coverage" {
+                        file(fileName(), output)
+                    }
+                }
+            }
+        }
+    }
+
+    static CoverageData generateCoverageData(ProcessInstance processInstance, String coverageDataName = null, Integer coverageDataWeight = 0){
+        CoverageData coverageData = new CoverageData()
+        coverageData.name = coverageDataName
+        coverageData.weight = coverageDataWeight
+
+        String processInstanceId = processInstance.getProcessInstanceId()
+
+        // Get Activity Events
+        def events = historyService()
+                .createHistoricActivityInstanceQuery()
+                .processInstanceId(processInstanceId)
+                .finished()
+                .orderPartiallyByOccurrence()
+                .asc()
+                .list()
+        def activityEvents = events.findAll {it.activityType != 'sequenceFlow' && it.activityType != 'multiInstanceBody'}
+                .collect {it.activityId}
+                .countBy {it}
+        coverageData.activityInstancesFinished = activityEvents
+
+        // Activity Events That are still active
+        def eventsStillActive = historyService()
+                .createHistoricActivityInstanceQuery()
+                .processInstanceId(processInstanceId)
+                .unfinished()
+                .orderPartiallyByOccurrence()
+                .asc()
+                .list()
+        def activityEventsStillActive = eventsStillActive.findAll {it.activityType != 'sequenceFlow'}
+                .collect {it.activityId}
+        coverageData.activityInstancesUnfinished = activityEventsStillActive
+
+        def sequenceFlows = events.findAll  {it.activityType == 'sequenceFlow'}
+                .collect {it.activityId}
+        coverageData.sequenceFlowsFinished = sequenceFlows
+
+        String processDefinitionId = historyService()
+                .createHistoricProcessInstanceQuery()
+                .processInstanceId(processInstanceId)
+                .singleResult()
+                .getProcessDefinitionId()
+
+        def model = repositoryService()
+                .getBpmnModelInstance(processDefinitionId)
+
+        def asyncData = model.getModelElementsByType(FlowNode.class).collect {[
+                'id': it.getId(),
+                'asyncBefore': it.isCamundaAsyncBefore().toBoolean(),
+                'asyncAfter': it.isCamundaAsyncAfter().toBoolean(),
+                'exclusive': it.isCamundaExclusive().toBoolean()
+        ]}
+        coverageData.modelAsyncData = asyncData
+
+        def userTasks =  model.getModelElementsByType(UserTask.class).collect {it.getId()}
+        coverageData.modelUserTasks = userTasks
+
+        def receiveTasks =  model.getModelElementsByType(ReceiveTask.class).collect {it.getId()}
+        coverageData.modelReceiveTasks = receiveTasks
+
+        def externalTasks =  model.getModelElementsByType(ServiceTask.class).findAll {it.getCamundaType() == 'external'}.collect {it.getId()}
+        coverageData.modelExternalTasks = externalTasks
+
+        def intermediateCatchEvents =  model.getModelElementsByType(IntermediateCatchEvent.class).collect {it.getId()}
+
+        coverageData.modelIntermediateCatchEvents = intermediateCatchEvents
+
+        coverageData.bpmnModel = StringEscapeUtils.escapeJavaScript(Bpmn.convertToString(model))
+
+
+//      Generate Variable Usage / Dataflow data
+        Collection<HistoricDetail> variableHistory = historyService().createHistoricDetailQuery()
+                .processInstanceId(processInstanceId)
+                .disableBinaryFetching()
+                .variableUpdates()
+                .list()
+
+        ArrayList<Map<String, Object>> activityVariableMappings = variableHistory.collect { historyItem ->
+            [('activityId'): historyService().createHistoricActivityInstanceQuery()
+                    .processInstanceId(processInstanceId)
+                    .activityInstanceId(historyItem.getActivityInstanceId())
+                    .singleResult().getActivityId(),
+             ('variableInstance') : historyItem.toString()
+            ]
+        }
+        coverageData.activityInstanceVariableMapping = activityVariableMappings
+
+        return coverageData
+    }
+
+   def compileTemplate(CoverageData coverageData){
+       def head = generateTemplateHead()
+       def body = generateTemplateBody(
+               "${UUID.randomUUID().toString().replaceAll("\\W", "")}", // Creates a UUID for the coverage name for uniqueness and removes all hyphens
+               coverageData.bpmnModel,
+               toJson(coverageData.modelUserTasks),
+               toJson(coverageData.activityInstancesFinished),
+               toJson(coverageData.sequenceFlowsFinished),
+               toJson(coverageData.modelAsyncData),
+               toJson(coverageData.modelReceiveTasks),
+               toJson(coverageData.modelExternalTasks),
+               toJson(coverageData.modelIntermediateCatchEvents),
+               toJson(coverageData.activityInstancesUnfinished),
+               toJson(coverageData.activityInstanceVariableMapping)
+       )
+       def footer = generateTemplateFooter()
+//      @TODO Update Template Generation code to be a cleaner usage of scripting
+
+       return """
+        ${head}
+        ${body}
+        ${footer}
+        """
+   }
+
+
+}
