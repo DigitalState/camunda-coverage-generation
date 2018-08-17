@@ -244,3 +244,14 @@ An example setup of a spock framework unit test:
   There are multiple ways to leverage this javascript file depending
   on your testing needs.  For example you can use the .addClasspathResource()
   and directly access the resource or can make it part of the database deployment
+
+
+  # Development
+
+  If you want to work with this project, compile your own jar locally, or just modify stuff and test it out you can easily do so:
+
+  in a terminal in the root of the project, run:
+
+  `./mvnw clean test` which will download the needed dependencies and build the test project.  Check the target folder after build to see the `bpmn-coverage` folder with the .html files.
+
+  Note: on first load there will be some extra downloads that occur, where the ["Maven Wrapper"](https://github.com/takari/maven-wrapper) is downloading or building the required Jar.  This is so you do not need to have Maven installed.
