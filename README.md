@@ -36,6 +36,10 @@ Blue = Unfinished/Still Active
 
 Grey Box with Number = Occurrence Count (Used to show where activity's have looped/executed multiple times.
 
+## Spock Framework Report Example:
+
+![spock](./docs/images/Spock-framework-report-example.png)
+
 
 ## Notes
 
