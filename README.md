@@ -272,3 +272,59 @@ Each Template is rendered according to:
 
 Template compilation and variable bindings are started from:
 `src/main/groovy/io/digitalstate/camunda/coverage/bpmn/CoverageBuilder.groovy` in the `compileTemplate()` method.
+
+
+# Using the Coverage Builder with JUnit / Pure Java
+
+As of 0.6, a groovy class that implements the CoverageBuilder trait has been added: `io.digitalstate.camunda.coverage.bpmn.CoverageBuilderJavaBridge.class`.
+
+This class can easily be used to implement coverage reports without having to write a test in Groovy.
+
+Example of the default JUnit template example provided by Camunda but with Coverage Generation:
+
+```java
+package coveragetest;
+
+import io.digitalstate.camunda.coverage.bpmn.CoverageBuilderJavaBridge;
+import org.camunda.bpm.engine.runtime.ProcessInstance;
+import org.camunda.bpm.engine.test.Deployment;
+import org.camunda.bpm.engine.test.ProcessEngineRule;
+
+import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.*;
+
+import org.junit.Rule;
+import org.junit.Test;
+
+/**
+ * @author Daniel Meyer
+ * @author Martin Schimak
+ */
+public class SimpleTestCase {
+
+    @Rule
+    public ProcessEngineRule rule = new ProcessEngineRule("camunda_config/camunda.cfg.xml");
+    CoverageBuilderJavaBridge coverageBuilder = new CoverageBuilderJavaBridge();
+
+    @Test
+    @Deployment(resources = {"testProcess.bpmn"})
+    public void shouldExecuteProcess() {
+        // Given we create a new process instance
+        ProcessInstance processInstance = runtimeService().startProcessInstanceByKey("testProcess");
+        // Then it should be active
+        assertThat(processInstance).isActive();
+        // And it should be the only instance
+        assertThat(processInstanceQuery().count()).isEqualTo(1);
+        // And there should exist just a single task within that process instance
+        assertThat(task(processInstance)).isNotNull();
+
+        // When we complete that task
+        complete(task(processInstance));
+        // Then the process instance should be ended
+        assertThat(processInstance).isEnded();
+        coverageBuilder.coverageSnapshot(processInstance);
+        coverageBuilder.saveCoverageSnapshots();
+
+    }
+
+}
+```
