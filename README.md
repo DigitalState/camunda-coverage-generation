@@ -121,7 +121,7 @@ Then add the following dependency:
  <dependency>
     <groupId>com.github.digitalstate</groupId>
     <artifactId>camunda-coverage-genertion-groovy</artifactId>
-    <version>v0.5</version>
+    <version>v0.6</version>
     <scope>test</scope>
  </dependency>
 ```
