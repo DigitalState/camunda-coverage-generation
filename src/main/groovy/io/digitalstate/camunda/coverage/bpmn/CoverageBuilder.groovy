@@ -11,6 +11,10 @@ import org.camunda.bpm.model.bpmn.instance.IntermediateCatchEvent
 import org.camunda.bpm.model.bpmn.instance.ReceiveTask
 import org.camunda.bpm.model.bpmn.instance.ServiceTask
 import org.camunda.bpm.model.bpmn.instance.UserTask
+import org.codehaus.groovy.reflection.ReflectionUtils
+
+import java.nio.file.Paths
+
 import static groovy.json.JsonOutput.toJson
 import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.historyService
 import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.repositoryService
@@ -24,8 +28,31 @@ trait CoverageBuilder implements TemplateGeneration{
         coverageSnapshots.put(coverageDataName, coverageData)
     }
 
-    void saveCoverageSnapshots(HashMap<String, CoverageData> data = coverageSnapshots, String buildDir = 'target') {
+    void saveCoverageSnapshots(Boolean useCdn = getBpmnViewerCdnUseState(), HashMap<String, CoverageData> data = coverageSnapshots, String buildDir = 'target') {
         FileTreeBuilder treeBuilder = new FileTreeBuilder()
+
+        // @TODO review use cases of reflection and how it gets used in practice.  Using the #2 as the depth for the calling class is not really a "sure bet"
+        // generate a folder name based on the calling class (the Test class name) - fully qualified
+        String folderName =  ReflectionUtils.getCallingClass(2).getName()
+
+         // @TODO implement lots of cleanup around how CDN vs local file generation is implemented in this method and the coveragebulder/templateGeneration traits
+        if (!useCdn) {
+            setUseBpmnViewerCdn(false)
+            InputStream bpmnJsPath = resourceStream(getLocalBpmnViewerPath())
+            String bpmnJsFileName = Paths.get(getLocalBpmnViewerPath()).getFileName()
+
+            treeBuilder {
+                "${buildDir}" {
+                        "bpmn-coverage" {
+                            "${folderName}" {
+                                "bpmnjs" {
+                                    file(bpmnJsFileName, bpmnJsPath.getText('UTF-8'))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
         data.eachWithIndex { key, value, index ->
             // Generate the compiled template using the CoverageData
@@ -51,7 +78,9 @@ trait CoverageBuilder implements TemplateGeneration{
             treeBuilder {
                 "${buildDir}" {
                     "bpmn-coverage" {
-                        file(fileName(), output)
+                        "${folderName}" {
+                            file(fileName(), output)
+                        }
                     }
                 }
             }

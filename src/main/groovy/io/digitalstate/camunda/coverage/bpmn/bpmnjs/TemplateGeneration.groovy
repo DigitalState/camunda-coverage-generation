@@ -6,6 +6,9 @@ import io.digitalstate.camunda.coverage.bpmn.Helpers
 trait TemplateGeneration implements Helpers{
 
     String templateDir = 'templates'
+    String bpmnViewerUrl = 'https://unpkg.com/bpmn-js@2.1.0/dist/bpmn-navigated-viewer.development.js'
+    Boolean useBpmnViewerCdn = true
+    String localBpmnViewerPath = './bpmnjs/bpmn-navigated-viewer.development-2.1.0.js'
 
     /**
      *
@@ -19,12 +22,45 @@ trait TemplateGeneration implements Helpers{
         return this.templateDir
     }
 
+    void setBpmnViewerUrl(String url){
+        this.bpmnViewerUrl = url
+    }
+
+    String getBpmnViewerUrl(){
+        return this.bpmnViewerUrl
+    }
+
+    void setLocalBpmnViewerPath(String path){
+        this.localBpmnViewerPath = path
+    }
+
+    String getLocalBpmnViewerPath(){
+        return this.localBpmnViewerPath
+    }
+
+    void useBpmnViewerCdn(Boolean useCdn){
+        this.useBpmnViewerCdn = useCdn
+    }
+
+    Boolean getBpmnViewerCdnUseState(){
+        return this.useBpmnViewerCdn
+    }
+
+
     def generateTemplateHead(String file = 'head.html'){
         return resourceStream("${getTemplateDir()}/${file}").getText()
     }
 
     def generateTemplateFooter(String file = 'footer.html'){
         return resourceStream("${getTemplateDir()}/${file}").getText()
+    }
+
+    String getBpmnViewer(){
+        if (this.useBpmnViewerCdn){
+            return this.bpmnViewerUrl
+        } else {
+            return this.localBpmnViewerPath
+        }
     }
 
     def generateTemplateBody( String featureName = '',
@@ -51,7 +87,8 @@ trait TemplateGeneration implements Helpers{
                'externalTasks': externalTasks,
                'intermediateCatchEvents': intermediateCatchEvents,
                'activityInstancesStillActive': activityInstancesStillActive,
-               'activityInstanceVariableMapping':activityInstanceVariableMapping
+               'activityInstanceVariableMapping':activityInstanceVariableMapping,
+               'bpmnViewer': getBpmnViewer()
         ]
 
         String template = resourceStream("${getTemplateDir()}/${file}").getText()
