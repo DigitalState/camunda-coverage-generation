@@ -13,6 +13,7 @@ import org.camunda.bpm.model.bpmn.instance.ServiceTask
 import org.camunda.bpm.model.bpmn.instance.UserTask
 import org.codehaus.groovy.reflection.ReflectionUtils
 
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import static groovy.json.JsonOutput.toJson
@@ -38,15 +39,17 @@ trait CoverageBuilder implements TemplateGeneration{
          // @TODO implement lots of cleanup around how CDN vs local file generation is implemented in this method and the coveragebulder/templateGeneration traits
         if (!useCdn) {
             setUseBpmnViewerCdn(false)
-            InputStream bpmnJsPath = resourceStream(getLocalBpmnViewerPath())
-            String bpmnJsFileName = Paths.get(getLocalBpmnViewerPath()).getFileName()
+            URL bpmnjsResource =  getClass().getResource(getLocalBpmnViewerPath())
+            InputStream bpmnJsInputStream = bpmnjsResource.newInputStream()
+            Path bpmnjsFilePath = Paths.get(bpmnjsResource.getPath())
+            String bpmnJsFileName = bpmnjsFilePath.getFileName().toString()
 
             treeBuilder {
                 "${buildDir}" {
                         "bpmn-coverage" {
                             "${folderName}" {
                                 "bpmnjs" {
-                                    file(bpmnJsFileName, bpmnJsPath.getText('UTF-8'))
+                                    file(bpmnJsFileName, bpmnJsInputStream.getText('UTF-8'))
                                 }
                             }
                         }

@@ -3,17 +3,13 @@ package io.digitalstate.camunda.coverage.bpmn.bpmnjs
 import groovy.text.SimpleTemplateEngine
 import io.digitalstate.camunda.coverage.bpmn.Helpers
 
-trait TemplateGeneration implements Helpers{
+trait TemplateGeneration{
 
-    String templateDir = 'templates'
+    String templateDir = '/templates'
     String bpmnViewerUrl = 'https://unpkg.com/bpmn-js@2.1.0/dist/bpmn-navigated-viewer.development.js'
     Boolean useBpmnViewerCdn = true
-    String localBpmnViewerPath = './bpmnjs/bpmn-navigated-viewer.development-2.1.0.js'
+    String localBpmnViewerPath = '/bpmnjs/bpmn-navigated-viewer.development-2.1.0.js'
 
-    /**
-     *
-     * @param templateDir relative to resources folder.  No leading slash
-     */
     void setTemplateDir(String templateDir){
         this.templateDir = templateDir
     }
@@ -48,18 +44,18 @@ trait TemplateGeneration implements Helpers{
 
 
     def generateTemplateHead(String file = 'head.html'){
-        return resourceStream("${getTemplateDir()}/${file}").getText()
+        return getClass().getResource("${getTemplateDir()}/${file}").getText()
     }
 
     def generateTemplateFooter(String file = 'footer.html'){
-        return resourceStream("${getTemplateDir()}/${file}").getText()
+        return getClass().getResource("${getTemplateDir()}/${file}").getText()
     }
 
     String getBpmnViewer(){
         if (this.useBpmnViewerCdn){
             return this.bpmnViewerUrl
         } else {
-            return this.localBpmnViewerPath
+            return ".${this.localBpmnViewerPath}"
         }
     }
 
@@ -91,7 +87,7 @@ trait TemplateGeneration implements Helpers{
                'bpmnViewer': getBpmnViewer()
         ]
 
-        String template = resourceStream("${getTemplateDir()}/${file}").getText()
+        String template = getClass().getResource("${getTemplateDir()}/${file}").getText()
         def engine = new SimpleTemplateEngine()
 
         String rendered = engine.createTemplate(template).make(binding)
