@@ -36,7 +36,7 @@ trait CoverageBuilder implements TemplateGeneration{
         // generate a folder name based on the calling class (the Test class name) - fully qualified
         String folderName =  ReflectionUtils.getCallingClass(2).getName()
 
-        // @TODO implement lots of cleanup around how CDN vs local file generation is implemented in this method and the coveragebulder/templateGeneration traits
+         // @TODO implement lots of cleanup around how CDN vs local file generation is implemented in this method and the coveragebulder/templateGeneration traits
         if (!useCdn) {
             setUseBpmnViewerCdn(false)
             URL bpmnjsResource =  getClass().getResource(getLocalBpmnViewerPath())
@@ -46,14 +46,16 @@ trait CoverageBuilder implements TemplateGeneration{
 
             treeBuilder {
                 "${buildDir}" {
-                    "bpmn-coverage" {
-                        "bpmnjs" {
-                            file(bpmnJsFileName, bpmnJsInputStream.getText('UTF-8'))
+                        "bpmn-coverage" {
+                            "${folderName}" {
+                                "bpmnjs" {
+                                    file(bpmnJsFileName, bpmnJsInputStream.getText('UTF-8'))
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
 
         data.eachWithIndex { key, value, index ->
             // Generate the compiled template using the CoverageData
@@ -181,17 +183,17 @@ trait CoverageBuilder implements TemplateGeneration{
         String processInstanceId = processInstance.getProcessInstanceId()
 
         Collection<HistoricDetail> variableHistory = historyService().createHistoricDetailQuery()
-                .processInstanceId(processInstanceId)
-                .disableBinaryFetching()
-                .variableUpdates()
-                .list()
+                                                                    .processInstanceId(processInstanceId)
+                                                                    .disableBinaryFetching()
+                                                                    .variableUpdates()
+                                                                    .list()
 
         ArrayList<Map<String, Object>> activityVariableMappings = variableHistory.collect { historyItem ->
             [('activityId'): historyService().createHistoricActivityInstanceQuery()
-                    .processInstanceId(processInstanceId)
-                    .activityInstanceId(historyItem.getActivityInstanceId())
-                    .singleResult()
-                    .getActivityId(),
+                                            .processInstanceId(processInstanceId)
+                                            .activityInstanceId(historyItem.getActivityInstanceId())
+                                            .singleResult()
+                                            .getActivityId(),
              ('variableInstance') : historyItem.toString()
             ]
         }
@@ -218,30 +220,30 @@ trait CoverageBuilder implements TemplateGeneration{
         return coverageData
     }
 
-    String compileTemplate(CoverageData coverageData){
-        def head = generateTemplateHead()
-        def body = generateTemplateBody(
-                "${UUID.randomUUID().toString().replaceAll("\\W", "")}", // Creates a UUID for the coverage name for uniqueness and removes all hyphens
-                coverageData.bpmnModel,
-                toJson(coverageData.modelUserTasks),
-                toJson(coverageData.activityInstancesFinished),
-                toJson(coverageData.sequenceFlowsFinished),
-                toJson(coverageData.modelAsyncData),
-                toJson(coverageData.modelReceiveTasks),
-                toJson(coverageData.modelExternalTasks),
-                toJson(coverageData.modelIntermediateCatchEvents),
-                toJson(coverageData.activityInstancesUnfinished),
-                toJson(coverageData.activityInstanceVariableMapping)
-        )
-        def footer = generateTemplateFooter()
+   String compileTemplate(CoverageData coverageData){
+       def head = generateTemplateHead()
+       def body = generateTemplateBody(
+               "${UUID.randomUUID().toString().replaceAll("\\W", "")}", // Creates a UUID for the coverage name for uniqueness and removes all hyphens
+               coverageData.bpmnModel,
+               toJson(coverageData.modelUserTasks),
+               toJson(coverageData.activityInstancesFinished),
+               toJson(coverageData.sequenceFlowsFinished),
+               toJson(coverageData.modelAsyncData),
+               toJson(coverageData.modelReceiveTasks),
+               toJson(coverageData.modelExternalTasks),
+               toJson(coverageData.modelIntermediateCatchEvents),
+               toJson(coverageData.activityInstancesUnfinished),
+               toJson(coverageData.activityInstanceVariableMapping)
+       )
+       def footer = generateTemplateFooter()
 //      @TODO Update Template Generation code to be a cleaner usage of scripting
 
-        return """
+       return """
         ${head}
         ${body}
         ${footer}
         """
-    }
+   }
 
 
 }

@@ -55,7 +55,7 @@ trait TemplateGeneration{
         if (this.useBpmnViewerCdn){
             return this.bpmnViewerUrl
         } else {
-            return "..${this.localBpmnViewerPath}"
+            return ".${this.localBpmnViewerPath}"
         }
     }
 
