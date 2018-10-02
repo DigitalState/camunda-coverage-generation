@@ -1,35 +1,27 @@
-<body>
-<div id="diagram${featureName}" style="height: 500px"></div>
-
-<!-- viewer -->
-<script src="${bpmnViewer}"></script>
-
-<!-- app -->
-<script>
-
-function showDiagram_${featureName}() {
+function showDiagram(data) {
     var viewer = new BpmnJS({
-        container: '#diagram${featureName}'
+        container: '#diagram' + data.featureName
         });
-    var diagramXML = '${xml}' // Wrapped in quotes to ensure XML is a string
-    var userTasks = ${userTasks}
-    var activityInstances = ${activityInstances}
-    var executedSequenceFlows = ${executedSequenceFlows} 
-    var asyncData = ${asyncData}
-    var receiveTasks = ${receiveTasks}
-    var externalTasks = ${externalTasks}
-    var intermediateCatchEvents = ${intermediateCatchEvents}
-    var activityInstancesStillActive = ${activityInstancesStillActive}
-    var activityInstanceVariableMapping = ${activityInstanceVariableMapping}
+
+    var diagramXML = data.xml // Wrapped in quotes to ensure XML is a string
+    var userTasks = data.userTasks
+    var activityInstances = data.activityInstances
+    var executedSequenceFlows = data.executedSequenceFlows
+    var asyncData = data.asyncData
+    var receiveTasks = data.receiveTasks
+    var externalTasks = data.externalTasks
+    var intermediateCatchEvents = data.intermediateCatchEvents
+    var activityInstancesStillActive = data.activityInstancesStillActive
+    var activityInstanceVariableMapping = data.activityInstanceVariableMapping
 
 
     viewer.importXML(diagramXML, function() {
     var overlays = viewer.get('overlays'),
         canvas = viewer.get('canvas'),
         elementRegistry = viewer.get('elementRegistry');
-        
+
          canvas.zoom('fit-viewport');
-    
+
     // Count of Activity Instance activation
     for (var key in activityInstances) {
         var activityInstance = key;
@@ -42,11 +34,10 @@ function showDiagram_${featureName}() {
                     html: '<div class="activity-instance-count">' + activityInstances[key] + '</div>'
                     });
     }
-    
+
     // Variable Execution Instances
     for (var i = 0; i < activityInstanceVariableMapping.length; i++) {
         var varMapping = activityInstanceVariableMapping[i]['activityId'];
-        console.log(activityInstanceVariableMapping[i]['activityId'])
         overlays.add(varMapping, {
                     position: {
                         top: -15,
@@ -141,13 +132,8 @@ function showDiagram_${featureName}() {
         }
 
         // TODO add Exclusive Marker. Data is already in object `task.exclusvie == true/false`
-
     }
 
 
     }); // end of ImportXML
 }
-// load + show diagram
-showDiagram_${featureName}();
-</script>
-</body>

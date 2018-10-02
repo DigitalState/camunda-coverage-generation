@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" type="text/css" href="${data.bpmnCSS}">
+        <link href="${data.bpmnFontAwesome}" rel="stylesheet">
+    </head>
+    <body>
+        <div id="diagram${data.featureName}" style="height: 500px"></div>
+
+        <script src="${data.bpmnViewer}"></script>
+        <script src="${data.bpmnShowDiagramJs}"></script>
+
+        <!-- app -->
+        <script>
+        // load + show diagram
+        showDiagram(${jsonData});
+        </script>
+    </body>
+</html>

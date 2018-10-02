@@ -1,8 +1,9 @@
 package io.digitalstate.camunda.coverage.bpmn
 
-import groovy.json.StringEscapeUtils
-import io.digitalstate.camunda.coverage.bpmn.bpmnjs.TemplateGeneration
+import org.apache.commons.io.FileUtils
 import org.camunda.bpm.engine.history.HistoricDetail
+import org.camunda.bpm.engine.impl.persistence.entity.HistoricDetailVariableInstanceUpdateEntity
+
 import org.camunda.bpm.engine.runtime.ProcessInstance
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
@@ -13,10 +14,13 @@ import org.camunda.bpm.model.bpmn.instance.ServiceTask
 import org.camunda.bpm.model.bpmn.instance.UserTask
 import org.codehaus.groovy.reflection.ReflectionUtils
 
+import io.digitalstate.camunda.coverage.bpmn.bpmnjs.CssGeneration
+import io.digitalstate.camunda.coverage.bpmn.bpmnjs.JsGeneration
+import io.digitalstate.camunda.coverage.bpmn.bpmnjs.TemplateGeneration
+
 import java.nio.file.Path
 import java.nio.file.Paths
 
-import static groovy.json.JsonOutput.toJson
 import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.historyService
 import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.repositoryService
 
@@ -29,32 +33,44 @@ trait CoverageBuilder implements TemplateGeneration{
         coverageSnapshots.put(coverageDataName, coverageData)
     }
 
-    void saveCoverageSnapshots(Boolean useCdn = getBpmnViewerCdnUseState(), HashMap<String, CoverageData> data = coverageSnapshots, String buildDir = 'target') {
+    void saveCoverageSnapshots(HashMap<String, CoverageData> data = coverageSnapshots,
+                               String buildDir = 'target') {
+
         FileTreeBuilder treeBuilder = new FileTreeBuilder()
 
-        // @TODO review use cases of reflection and how it gets used in practice.  Using the #2 as the depth for the calling class is not really a "sure bet"
-        // generate a folder name based on the calling class (the Test class name) - fully qualified
+        // @TODO review use cases of reflection and how it gets used in practice.  Using the #2 as the depth for the calling class is not really a "sure bet" as far as I am aware
+        // generate a folder name based on the calling class (the Test class name) - fully qualified name is used
         String folderName =  ReflectionUtils.getCallingClass(2).getName()
 
-        // @TODO implement lots of cleanup around how CDN vs local file generation is implemented in this method and the coveragebulder/templateGeneration traits
-        if (!useCdn) {
-            setUseBpmnViewerCdn(false)
-            URL bpmnjsResource =  getClass().getResource(getLocalBpmnViewerPath())
-            InputStream bpmnJsInputStream = bpmnjsResource.newInputStream()
-            Path bpmnjsFilePath = Paths.get(bpmnjsResource.getPath())
-            String bpmnJsFileName = bpmnjsFilePath.getFileName().toString()
+        //Add Template Files
+        // @TODO refactor
+        URL bpmnjsResource =  getClass().getResource(getLocalBpmnViewerPath())
+        Path bpmnjsFilePath = Paths.get(bpmnjsResource.getPath())
+        Path fontAwesome = getLocalFontAwesomePath()
 
-            treeBuilder {
-                "${buildDir}" {
-                    "bpmn-coverage" {
-                        "bpmnjs" {
-                            file(bpmnJsFileName, bpmnJsInputStream.getText('UTF-8'))
-                        }
+        CssGeneration cssGeneration = new CssGeneration()
+        JsGeneration jsGeneration = new JsGeneration()
+        Path cssFile = cssGeneration.getCssFilePath()
+        Path jsFile = jsGeneration.getJsFilePath()
+        treeBuilder {
+            "${buildDir}" {
+                "bpmn-coverage" {
+                    "bpmnjs" {
+                        file(jsFile.getFileName().toString(), jsFile.newInputStream().getText('UTF-8'))
+                        file(cssFile.getFileName().toString(), cssFile.newInputStream().getText('UTF-8'))
+                        file(bpmnjsFilePath.getFileName().toString(), bpmnjsFilePath.newInputStream().getText('UTF-8'))
                     }
                 }
             }
         }
 
+        //Copy fonts folder
+        File fontsFolderSource = Paths.get(getClass().getResource("/bpmnjs/font-awesome").toURI()).toFile()
+        File fontsFolderDestination = Paths.get("${buildDir}/bpmn-coverage/bpmnjs/font-awesome").toFile()
+        FileUtils.copyDirectory(fontsFolderSource, fontsFolderDestination, false)
+
+
+        // Generate coverageData
         data.eachWithIndex { key, value, index ->
             // Generate the compiled template using the CoverageData
             String output = compileTemplate(value)
@@ -173,10 +189,6 @@ trait CoverageBuilder implements TemplateGeneration{
         bpmnModelInstance.getModelElementsByType(IntermediateCatchEvent.class).collect {it.getId()}
     }
 
-    String convertBpmnModelInstanceToJsReadyString(BpmnModelInstance bpmnModelInstance){
-        StringEscapeUtils.escapeJavaScript(Bpmn.convertToString(bpmnModelInstance))
-    }
-
     List<Map<String, Object>> getVariableActivityFromDb(ProcessInstance processInstance){
         String processInstanceId = processInstance.getProcessInstanceId()
 
@@ -187,12 +199,16 @@ trait CoverageBuilder implements TemplateGeneration{
                 .list()
 
         ArrayList<Map<String, Object>> activityVariableMappings = variableHistory.collect { historyItem ->
+            historyItem = (HistoricDetailVariableInstanceUpdateEntity)historyItem
             [('activityId'): historyService().createHistoricActivityInstanceQuery()
                     .processInstanceId(processInstanceId)
                     .activityInstanceId(historyItem.getActivityInstanceId())
                     .singleResult()
                     .getActivityId(),
-             ('variableInstance') : historyItem.toString()
+             ('variableInstance') : [
+                     'variableValue':historyItem.getValue(),
+                     'variableName' : historyItem.getVariableName(),
+                     'variableType':historyItem.getVariableTypeName() ]
             ]
         }
         return activityVariableMappings
@@ -212,34 +228,20 @@ trait CoverageBuilder implements TemplateGeneration{
         coverageData.modelReceiveTasks = getReceiveTasksFromModel(model)
         coverageData.modelExternalTasks = getExternalTasksFromModel(model)
         coverageData.modelIntermediateCatchEvents = getIntermediateCatchEventsFromModel(model)
-        coverageData.bpmnModel = convertBpmnModelInstanceToJsReadyString(model)
+        coverageData.bpmnModel = Bpmn.convertToString(model)
         coverageData.activityInstanceVariableMapping = getVariableActivityFromDb(processInstance)
 
         return coverageData
     }
 
     String compileTemplate(CoverageData coverageData){
-        def head = generateTemplateHead()
-        def body = generateTemplateBody(
-                "${UUID.randomUUID().toString().replaceAll("\\W", "")}", // Creates a UUID for the coverage name for uniqueness and removes all hyphens
-                coverageData.bpmnModel,
-                toJson(coverageData.modelUserTasks),
-                toJson(coverageData.activityInstancesFinished),
-                toJson(coverageData.sequenceFlowsFinished),
-                toJson(coverageData.modelAsyncData),
-                toJson(coverageData.modelReceiveTasks),
-                toJson(coverageData.modelExternalTasks),
-                toJson(coverageData.modelIntermediateCatchEvents),
-                toJson(coverageData.activityInstancesUnfinished),
-                toJson(coverageData.activityInstanceVariableMapping)
-        )
-        def footer = generateTemplateFooter()
+//        def head = generateTemplateHead()
+        def body = generateTemplateBody(coverageData)
+//        def footer = generateTemplateFooter()
 //      @TODO Update Template Generation code to be a cleaner usage of scripting
 
         return """
-        ${head}
         ${body}
-        ${footer}
         """
     }
 

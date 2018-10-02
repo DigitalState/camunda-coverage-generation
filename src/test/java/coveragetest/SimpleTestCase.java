@@ -37,7 +37,7 @@ public class SimpleTestCase {
         // Then the process instance should be ended
         assertThat(processInstance).isEnded();
         coverageBuilder.coverageSnapshot(processInstance);
-        coverageBuilder.saveCoverageSnapshots(false);
+        coverageBuilder.saveCoverageSnapshots();
 
     }
 

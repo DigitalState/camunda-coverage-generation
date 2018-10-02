@@ -1,29 +1,26 @@
 package io.digitalstate.camunda.coverage.bpmn.bpmnjs
 
+import groovy.json.JsonOutput
 import groovy.text.SimpleTemplateEngine
-import io.digitalstate.camunda.coverage.bpmn.Helpers
+import io.digitalstate.camunda.coverage.bpmn.CoverageData
+
+import java.nio.file.Path
+import java.nio.file.Paths
 
 trait TemplateGeneration{
 
-    String templateDir = '/templates'
-    String bpmnViewerUrl = 'https://unpkg.com/bpmn-js@2.1.0/dist/bpmn-navigated-viewer.development.js'
-    Boolean useBpmnViewerCdn = true
+    // @TODO convert to class
+
     String localBpmnViewerPath = '/bpmnjs/bpmn-navigated-viewer.development-2.1.0.js'
+    String defaultFontAwesome = '/bpmnjs/font-awesome/css/font-awesome.min.css'
+    Path localFontAwesomePath = Paths.get(getClass().getResource(this.defaultFontAwesome).toURI())
 
-    void setTemplateDir(String templateDir){
-        this.templateDir = templateDir
+    void setLocalFontAwesomePath(String customPath){
+        this.localFontAwesomePath = Paths.get(customPath)
     }
 
-    String getTemplateDir(){
-        return this.templateDir
-    }
-
-    void setBpmnViewerUrl(String url){
-        this.bpmnViewerUrl = url
-    }
-
-    String getBpmnViewerUrl(){
-        return this.bpmnViewerUrl
+    Path getLocalFontAwesomePath(){
+        return this.localFontAwesomePath
     }
 
     void setLocalBpmnViewerPath(String path){
@@ -34,66 +31,39 @@ trait TemplateGeneration{
         return this.localBpmnViewerPath
     }
 
-    void useBpmnViewerCdn(Boolean useCdn){
-        this.useBpmnViewerCdn = useCdn
-    }
+    def generateTemplateBody(CoverageData coverageData){
+        // Feature Name
+        String uuid = UUID.randomUUID().toString().replaceAll("\\W", "")
 
-    Boolean getBpmnViewerCdnUseState(){
-        return this.useBpmnViewerCdn
-    }
-
-
-    def generateTemplateHead(String file = 'head.html'){
-        return getClass().getResource("${getTemplateDir()}/${file}").getText()
-    }
-
-    def generateTemplateFooter(String file = 'footer.html'){
-        return getClass().getResource("${getTemplateDir()}/${file}").getText()
-    }
-
-    String getBpmnViewer(){
-        if (this.useBpmnViewerCdn){
-            return this.bpmnViewerUrl
-        } else {
-            return "..${this.localBpmnViewerPath}"
-        }
-    }
-
-    def generateTemplateBody( String featureName = '',
-                              String xml = '',
-                              userTasks = [],
-                              activityInstances =[],
-                              executedSequenceFlows =[],
-                              asyncData =[],
-                              receiveTasks =[],
-                              externalTasks =[],
-                              intermediateCatchEvents =[],
-                              activityInstancesStillActive =[],
-                              activityInstanceVariableMapping =[],
-                              String file = 'body.html'){
-
-        def binding = [
-               'featureName': featureName,
-               'xml': xml,
-               'userTasks': userTasks,
-               'activityInstances': activityInstances,
-               'executedSequenceFlows': executedSequenceFlows,
-               'asyncData': asyncData,
-               'receiveTasks': receiveTasks,
-               'externalTasks': externalTasks,
-               'intermediateCatchEvents': intermediateCatchEvents,
-               'activityInstancesStillActive': activityInstancesStillActive,
-               'activityInstanceVariableMapping':activityInstanceVariableMapping,
-               'bpmnViewer': getBpmnViewer()
+        def coverageDataPrep = [
+                'featureName' : uuid ,
+                'xml' : coverageData.bpmnModel ,
+                'userTasks' : coverageData.modelUserTasks ,
+                'activityInstances' : coverageData.activityInstancesFinished ,
+                'executedSequenceFlows' : coverageData.sequenceFlowsFinished ,
+                'asyncData' : coverageData.modelAsyncData ,
+                'receiveTasks' : coverageData.modelReceiveTasks ,
+                'externalTasks' : coverageData.modelExternalTasks ,
+                'intermediateCatchEvents' : coverageData.modelIntermediateCatchEvents ,
+                'activityInstancesStillActive' : coverageData.activityInstancesUnfinished ,
+                'activityInstanceVariableMapping' : coverageData.activityInstanceVariableMapping ,
+                'template': '/templates/template.html',
+                'bpmnViewer' : "..${this.localBpmnViewerPath}" ,
+                'bpmnShowDiagramJs' : "../bpmnjs/${new JsGeneration().getJsFilePath().getFileName().toString()}" ,
+                "bpmnCSS" : "../bpmnjs/${new CssGeneration().getCssFilePath().getFileName().toString()}",
+                'bpmnFontAwesome': "..${this.defaultFontAwesome}"
         ]
 
-        String template = getClass().getResource("${getTemplateDir()}/${file}").getText()
-        def engine = new SimpleTemplateEngine()
+        def binding = [
+                'data' : coverageDataPrep,
+                'jsonData': JsonOutput.toJson(coverageDataPrep)
+        ]
 
+        // @TODO Cleanup to make better code.  This is too messy atm.
+        String template = getClass().getResource(coverageDataPrep.template).getText()
+        def engine = new SimpleTemplateEngine()
         String rendered = engine.createTemplate(template).make(binding)
 
         return rendered
-
     }
-
 }

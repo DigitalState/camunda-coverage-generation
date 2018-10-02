@@ -12,9 +12,6 @@ The coverage generation helpers provide easy to use methods to take
 Each snapshot generates "Coverage Data" which is used to generate HTML
 files in the build target folder.
 
-The HTML files have all the required data injected into them and are self-contained.
-Each .html file uses the bpmnjs renderer loaded through CDN.
-
 ## Example output
 
 Initial Parent Process:
@@ -78,6 +75,7 @@ Each coverage item can have its look-and-feel modified through a change in the r
 
 
 The coverage generation tool using Groovy Traits to inject the functions.  Within your Groovy class of your Unit Test add the following traits `CoverageBuilder` and `SequenceFlowHistory`
+There is also a Java bridge for use within Java JUnit tests for when not using Groovy Unit Testing.
 
 Such as:
 
@@ -91,19 +89,6 @@ CallActivitySingleFeatureSpec extends Specification implements CoverageBuilder, 
 }
 
 ```
-
-# Offline Usage (BPMN.js CDN vs Local bpmn.js file)
-
-By default the bpmn.js library from [bpmn.io](http://bpmn.io) is loaded from a CDN.  This is done for easy compartmentalization 
-and 'no worry' setup.  But in some environments this may not be optimal:
-
-For build/test environment that do not have access to the internet, a local bpmn.js is provided.
-
-When using the `saveCoverageSnapshots()` method you can provide a boolean value to override the default/globally set CDN configuration. 
-By default the CDN is used.  If you use `saveCoverageSnapshots(false)`, this will instruct the coverage builder to use the local bpmn.js file, 
-and it will save that file into `${buildDir}/bpmn-coverage/bpmnjs/[bpmnjsFile]`, typically this means something like: `target/bpmn-coverage/bpmnjs/bpmn-navigated-viewer.development-2.1.0.js`.
-
-See the TemplateGeneration.groovy file for further methods on how to override the location of the CDN URL and the local bpmnjs file.
 
 # How to install
 
@@ -132,7 +117,7 @@ Then add the following dependency:
  <dependency>
     <groupId>com.github.digitalstate</groupId>
     <artifactId>camunda-coverage-generation-groovy</artifactId>
-    <version>v0.8</version>
+    <version>v0.10</version>
     <scope>test</scope>
  </dependency>
 ```
@@ -270,19 +255,6 @@ in a terminal in the root of the project, run:
 `./mvnw clean test` which will download the needed dependencies and build the test project.  Check the target folder after build to see the `bpmn-coverage` folder with the .html files.
 
 Note: on first load there will be some extra downloads that occur, where the ["Maven Wrapper"](https://github.com/takari/maven-wrapper) is downloading or building the required Jar.  This is so you do not need to have Maven installed.
-
-
-# Extending the Templates
-
-If you wish to modify the templates see:
-
-`src/main/resources/templates` folder.  There are three templates: header.html, body.html, and footer.html.  These templates are merged at runtime and processed through groovy simple template system.
-
-Each Template is rendered according to: 
-`src/main/groovy/io/digitalstate/camunda/coverage/bpmn/bpmnjs/TemplateGeneration.groovy`
-
-Template compilation and variable bindings are started from:
-`src/main/groovy/io/digitalstate/camunda/coverage/bpmn/CoverageBuilder.groovy` in the `compileTemplate()` method.
 
 
 # Using the Coverage Builder with JUnit / Pure Java

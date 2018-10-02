@@ -1,9 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <style>
-        /* Element Highlight (not sequence flows) */
+ /* Element Highlight (not sequence flows) */
         .highlight:not(.djs-connection) .djs-visual > :nth-child(1) {
             fill: rgba(32, 216, 32, 0.63) !important; /* color elements as green */
         }
@@ -80,5 +75,3 @@
             min-width: 15px;
             text-align: center;
         }
-    </style>
-</head>
