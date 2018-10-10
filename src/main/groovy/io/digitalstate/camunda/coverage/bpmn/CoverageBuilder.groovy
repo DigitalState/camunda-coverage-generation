@@ -41,7 +41,7 @@ trait CoverageBuilder{
 
     void saveCoverageSnapshots(HashMap<String, CoverageData> data = coverageSnapshots,
                                String buildDir = 'target',
-                               TemplateGeneration templateGeneration = new TemplateGeneration(getJsGeneration(), getCssGeneration())) {
+                               TemplateGeneration templateGeneration = new TemplateGeneration(jsGeneration, cssGeneration)) {
 
         FileTreeBuilder treeBuilder = new FileTreeBuilder()
 
@@ -50,29 +50,34 @@ trait CoverageBuilder{
         String folderName =  ReflectionUtils.getCallingClass(2).getName()
 
         //Add Template Files
-        // @TODO refactor
-        Path bpmnjsFilePath = templateGeneration.getBpmnJsViewer()
-//        Path fontAwesome = getTemplateGeneration().getFontAwesomeCss()
+        String jsFileName = getJsGeneration().getJsFileName()
+        String JsFile = getJsGeneration().generateJs()
 
-        Path cssFile = getCssGeneration().getCssFilePath()
-        Path jsFile =  getJsGeneration().getJsFilePath()
+        String cssFileName = getCssGeneration().getCssFileName()
+        String cssFile = getCssGeneration().generateCss()
+
+        String bpmnJsViewerFileName = templateGeneration.getBpmnJsViewerFileName()
+        String bpmnJsViewerFile = templateGeneration.getBpmnJsViewerFile()
+
         treeBuilder {
             "${buildDir}" {
                 "bpmn-coverage" {
                     "bpmnjs" {
-                        file(jsFile.getFileName().toString(), jsFile.newInputStream().getText('UTF-8'))
-                        file(cssFile.getFileName().toString(), cssFile.newInputStream().getText('UTF-8'))
-                        file(bpmnjsFilePath.getFileName().toString(), bpmnjsFilePath.newInputStream().getText('UTF-8'))
+                        file(jsFileName, JsFile)
+                        file(cssFileName, cssFile)
+                        file(bpmnJsViewerFileName, bpmnJsViewerFile)
                     }
                 }
             }
         }
 
         //Copy fonts folder
-        File fontsFolderSource = Paths.get(getClass().getResource("/bpmnjs/font-awesome").toURI()).toFile()
+        String fontsFolderPath = '/bpmnjs/font-awesome/'
+//        URL codeurl = getClass().getProtectionDomain().getCodeSource().getLocation()
+//        File fontsFolderSource = new File("jar:${getClass().getProtectionDomain().getCodeSource().getLocation()}!${fontsFolderPath}");
+        File fontsFolderSource = new File(getClass().getResource(fontsFolderPath).toURI())
         File fontsFolderDestination = Paths.get("${buildDir}/bpmn-coverage/bpmnjs/font-awesome").toFile()
         FileUtils.copyDirectory(fontsFolderSource, fontsFolderDestination, false)
-
 
         // Generate coverageData
         data.eachWithIndex { key, value, index ->

@@ -3,14 +3,22 @@ package io.digitalstate.camunda.coverage.bpmn.bpmnjs
 import groovy.json.JsonOutput
 import groovy.text.SimpleTemplateEngine
 import io.digitalstate.camunda.coverage.bpmn.CoverageData
-
-import java.nio.file.Path
-import java.nio.file.Paths
+import org.apache.commons.io.FilenameUtils
 
 class TemplateGeneration {
 
-    Path bpmnJsViewer = Paths.get(getClass().getResource('/bpmnjs/bpmn-navigated-viewer.development-2.1.0.js').toURI())
-    Path fontAwesomeCss = Paths.get(getClass().getResource('/bpmnjs/font-awesome/css/font-awesome.min.css').toURI())
+    String defaultBpmnJsViewer = "/bpmnjs/bpmn-navigated-viewer.development-2.1.0.js"
+    String bpmnJsViewerFileName = FilenameUtils.getName(this.defaultBpmnJsViewer)
+    String bpmnJsViewerFile = getClass().getResourceAsStream(this.defaultBpmnJsViewer).getText('UTF-8')
+
+    String defaultFontAwesomeCss = "/bpmnjs/font-awesome/css/font-awesome.min.css"
+    String fontAwesomeCssFileName = FilenameUtils.getName(this.defaultFontAwesomeCss)
+    String fontAwesomeCssFile = getClass().getResourceAsStream(this.defaultFontAwesomeCss).getText('UTF-8')
+
+    String defaultTemplate = '/templates/template.html'
+    String templateFileName = FilenameUtils.getName(this.defaultTemplate)
+    String templateFile = getClass().getResourceAsStream(this.defaultTemplate).getText('UTF-8')
+
     JsGeneration jsGeneration
     CssGeneration cssGeneration
 
@@ -35,11 +43,10 @@ class TemplateGeneration {
                 'intermediateCatchEvents' : coverageData.modelIntermediateCatchEvents,
                 'activityInstancesStillActive' : coverageData.activityInstancesUnfinished,
                 'activityInstanceVariableMapping' : coverageData.activityInstanceVariableMapping,
-                'template': '/templates/template.html',
-                'bpmnViewer' : "../bpmnjs/${getBpmnJsViewer().getFileName().toString()}",
-                'bpmnShowDiagramJs' : "../bpmnjs/${getJsGeneration().getJsFilePath().getFileName().toString()}",
-                "bpmnCSS" : "../bpmnjs/${getCssGeneration().getCssFilePath().getFileName().toString()}",
-                'bpmnFontAwesome': "../bpmnjs/${getFontAwesomeCss().getFileName().toString()}"
+                'bpmnViewer' : "../bpmnjs/${getBpmnJsViewerFileName()}",
+                'bpmnShowDiagramJs' : "../bpmnjs/${getJsGeneration().getJsFileName()}",
+                "bpmnCSS" : "../bpmnjs/${getCssGeneration().getCssFileName()}",
+                'bpmnFontAwesome': "../bpmnjs/${getFontAwesomeCssFileName()}"
         ]
 
         def binding = [
@@ -47,7 +54,7 @@ class TemplateGeneration {
                 'jsonData': JsonOutput.toJson(coverageDataPrep)
         ]
 
-        String template = getClass().getResource(coverageDataPrep.template).getText()
+        String template = getTemplateFile()
         def engine = new SimpleTemplateEngine()
         String rendered = engine.createTemplate(template).make(binding)
 
@@ -58,22 +65,6 @@ class TemplateGeneration {
     //
     // SETTERS AND GETTERS
     //
-    void setFontAwesomeCss(String path){
-        this.fontAwesomeCss = Paths.get(getClass().getResource(path).toURI())
-    }
-
-    Path getFontAwesomeCss(){
-        return this.fontAwesomeCss
-    }
-
-    void setBpmnJsViewer(String path){
-        this.bpmnJsViewer = Paths.get(getClass().getResource(path).toURI())
-    }
-
-    Path getBpmnJsViewer(){
-        return this.bpmnJsViewer
-    }
-
     void setJsGeneration(JsGeneration jsGeneration){
         this.jsGeneration = jsGeneration
     }
@@ -82,7 +73,50 @@ class TemplateGeneration {
         return this.jsGeneration
     }
 
+    CssGeneration getCssGeneration(){
+        return this.cssGeneration
+    }
+
     void setCssGeneration(CssGeneration cssGeneration){
         this.cssGeneration = cssGeneration
     }
+
+    String getFontAwesomeCssFile(){
+        return this.fontAwesomeCssFile
+    }
+    void setFontAwesomeCssFile(InputStream inputStream){
+        this.fontAwesomeCssFile = inputStream
+    }
+
+    String getFontAwesomeCssFileName(){
+        return this.fontAwesomeCssFileName
+    }
+    void setFontAwesomeCssFileName(String filename){
+        this.fontAwesomeCssFileName = filename
+    }
+
+    String getBpmnJsViewerFile(){
+        return this.bpmnJsViewerFile
+    }
+
+    void setBpmnJsViewerFile(InputStream inputStream){
+        this.bpmnJsViewerFile = inputStream
+    }
+
+    String getBpmnJsViewerFileName(){
+        return this.bpmnJsViewerFileName
+    }
+    void setBpmnJsViewerFileName(String filename){
+        this.bpmnJsViewerFileName = filename
+    }
+
+    void setTemplateFile(InputStream inputStream){
+        this.templateFile = inputStream.getText('UTF-8')
+    }
+    String getTemplateFile(){
+        return this.templateFile
+    }
+
+
+
 }

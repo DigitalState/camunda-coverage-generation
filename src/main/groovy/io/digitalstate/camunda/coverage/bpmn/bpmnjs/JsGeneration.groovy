@@ -1,31 +1,31 @@
 package io.digitalstate.camunda.coverage.bpmn.bpmnjs
 
 import groovy.text.SimpleTemplateEngine
-
-import java.nio.file.Path
-import java.nio.file.Paths
+import org.apache.commons.io.FilenameUtils
 
 class JsGeneration {
 
-    String defaultJsFile = '/templates/showDiagram.js'
-    Path jsFilePath = Paths.get(getClass().getResource(this.defaultJsFile).toURI())
+    private String defaultJsFile = '/templates/showDiagram.js'
+    String jsFileName = FilenameUtils.getName(this.defaultJsFile)
+    String jsFile = getClass().getResourceAsStream(this.defaultJsFile).getText("UTF-8")
 
-    void setJsFile(String customPath){
-        this.cssFilePath = Paths.get(customPath)
-    }
-
-    Path getJsFilePath(){
-        return this.jsFilePath
+    void setJsFile(InputStream inputStream){
+        this.jsFile = inputStream.getText('UTF-8')
     }
 
     String getJsFileName(){
-        return this.jsFilePath.getFileName().toString()
+        return this.jsFileName
+    }
+
+    void setJsFileName(String fileName){
+        this.jsFileName = fileName
     }
 
     String generateJs(){
-        String template = this.jsFilePath.newInputStream().getText('UTF-8')
+        String template = this.jsFile
         def engine = new SimpleTemplateEngine()
         String rendered = engine.createTemplate(template).make()
         return rendered
     }
+
 }

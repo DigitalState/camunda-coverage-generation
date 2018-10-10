@@ -1,25 +1,27 @@
 package io.digitalstate.camunda.coverage.bpmn.bpmnjs
 
 import groovy.text.SimpleTemplateEngine
-
-import java.nio.file.Path
-import java.nio.file.Paths
+import org.apache.commons.io.FilenameUtils
 
 class CssGeneration {
 
-    private String defaultCssFile = '/templates/bpmn.css'
-    private Path cssFilePath = Paths.get(getClass().getResource(this.defaultCssFile).toURI())
+    private final String defaultCssFile = '/templates/bpmn.css'
+    String cssFileName = FilenameUtils.getName(this.defaultCssFile)
+    String cssFile = getClass().getResourceAsStream(this.defaultCssFile).getText('UTF-8')
 
-    void setCssFile(String customPath){
-        this.cssFilePath = Paths.get(getClass().getResource(customPath.toString()).toURI())
+    void setCssFile(InputStream inputStream){
+        this.cssFile = inputStream.getText('UTF-8')
     }
 
-    Path getCssFilePath(){
-        return this.cssFilePath
+    String getCssFileName(){
+        return this.cssFileName
+    }
+    void setCssFileName(String fileName){
+        this.cssFileName = fileName
     }
 
     String generateCss(){
-        String template = this.cssFilePath.newInputStream().getText('UTF-8')
+        String template = this.cssFile
         def engine = new SimpleTemplateEngine()
         String rendered = engine.createTemplate(template).make()
         return rendered
