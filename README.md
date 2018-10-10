@@ -117,7 +117,7 @@ Then add the following dependency:
  <dependency>
     <groupId>com.github.digitalstate</groupId>
     <artifactId>camunda-coverage-generation-groovy</artifactId>
-    <version>v0.10</version>
+    <version>v0.11</version>
     <scope>test</scope>
  </dependency>
 ```
@@ -133,6 +133,12 @@ class CallActivitySingleFeatureSpec extends Specification implements CoverageBui
     @Shared String deploymentId
 
     def setupSpec(){
+    
+        // Set a Custom CSS File:
+        // CssGeneration myCss = new CssGeneration()
+        // myCss.setCssFile('/bpmn1.css')
+        // setCssGeneration(myCss)
+    
         def deployment = repositoryService().createDeployment()
                 .addInputStream(getSequenceFlowFileName(), getSequenceFlowListenerScript())
                 .addModelInstance('CallActivityCoverage.bpmn', addSequenceFlowListeners('bpmn/CallActivityCoverage.bpmn'))
@@ -223,6 +229,7 @@ An example setup of a spock framework unit test:
 ```groovy
 ...
 def setupSpec(){
+
 def deployment = repositoryService().createDeployment()
                                     .addInputStream(getSequenceFlowFileName(), getSequenceFlowListenerScript())
                                     .addModelInstance('CallActivityCoverage.bpmn', addSequenceFlowListeners('bpmn/conditionalstart/CallActivityCoverage.bpmn'))
@@ -256,6 +263,32 @@ in a terminal in the root of the project, run:
 
 Note: on first load there will be some extra downloads that occur, where the ["Maven Wrapper"](https://github.com/takari/maven-wrapper) is downloading or building the required Jar.  This is so you do not need to have Maven installed.
 
+
+# Customizations to CSS and JS
+
+Often you will want to customize the CSS and Javascript rendering of your coverage snapshots.
+You can easily do this for each use of `saveCoverageSnapshots()`.
+
+```groovy
+// Set a Custom CSS File:
+CssGeneration myCss = new CssGeneration();
+myCss.setCssFile('/bpmn1.css');
+setCssGeneration(myCss);
+
+// Set a Custom JS File:
+JsGeneration myJs = new JsGeneration();
+myJs.setJsFile('/someCustomJs.js');
+setJsGeneration(myJs);
+
+```
+
+The CoverageBuilder exposes a `setCssGeneration()` and a `setJsGeneration()` method that allow you to customize 
+which CssGeneration and JsGeneration class instances are used during the generation of the html files.
+
+You can change/set your CSS and JS Files at any point and continue to change them after each save to disk.  This allows you to have different visuals of the same BPMN 
+snapshot if you wish (such as various views of state, sync and async, etc).
+
+See the tests for commented-out examples.
 
 # Using the Coverage Builder with JUnit / Pure Java
 
@@ -291,6 +324,12 @@ public class SimpleTestCase {
     @Test
     @Deployment(resources = {"testProcess.bpmn"})
     public void shouldExecuteProcess() {
+
+        // Set a Custom CSS File:
+        // CssGeneration myCustomCSS = new CssGeneration();
+        // myCustomCSS.setCssFile("/bpmn1.css");
+        // coverageBuilder.setCssGeneration(myCustomCSS);
+
         // Given we create a new process instance
         ProcessInstance processInstance = runtimeService().startProcessInstanceByKey("testProcess");
         // Then it should be active

@@ -7,28 +7,16 @@ import io.digitalstate.camunda.coverage.bpmn.CoverageData
 import java.nio.file.Path
 import java.nio.file.Paths
 
-trait TemplateGeneration{
+class TemplateGeneration {
 
-    // @TODO convert to class
+    Path bpmnJsViewer = Paths.get(getClass().getResource('/bpmnjs/bpmn-navigated-viewer.development-2.1.0.js').toURI())
+    Path fontAwesomeCss = Paths.get(getClass().getResource('/bpmnjs/font-awesome/css/font-awesome.min.css').toURI())
+    JsGeneration jsGeneration
+    CssGeneration cssGeneration
 
-    String localBpmnViewerPath = '/bpmnjs/bpmn-navigated-viewer.development-2.1.0.js'
-    String defaultFontAwesome = '/bpmnjs/font-awesome/css/font-awesome.min.css'
-    Path localFontAwesomePath = Paths.get(getClass().getResource(this.defaultFontAwesome).toURI())
-
-    void setLocalFontAwesomePath(String customPath){
-        this.localFontAwesomePath = Paths.get(customPath)
-    }
-
-    Path getLocalFontAwesomePath(){
-        return this.localFontAwesomePath
-    }
-
-    void setLocalBpmnViewerPath(String path){
-        this.localBpmnViewerPath = path
-    }
-
-    String getLocalBpmnViewerPath(){
-        return this.localBpmnViewerPath
+    TemplateGeneration(JsGeneration jsGeneration, CssGeneration cssGeneration){
+        setJsGeneration(jsGeneration)
+        setCssGeneration(cssGeneration)
     }
 
     def generateTemplateBody(CoverageData coverageData){
@@ -36,22 +24,22 @@ trait TemplateGeneration{
         String uuid = UUID.randomUUID().toString().replaceAll("\\W", "")
 
         def coverageDataPrep = [
-                'featureName' : uuid ,
-                'xml' : coverageData.bpmnModel ,
-                'userTasks' : coverageData.modelUserTasks ,
-                'activityInstances' : coverageData.activityInstancesFinished ,
-                'executedSequenceFlows' : coverageData.sequenceFlowsFinished ,
-                'asyncData' : coverageData.modelAsyncData ,
-                'receiveTasks' : coverageData.modelReceiveTasks ,
-                'externalTasks' : coverageData.modelExternalTasks ,
-                'intermediateCatchEvents' : coverageData.modelIntermediateCatchEvents ,
-                'activityInstancesStillActive' : coverageData.activityInstancesUnfinished ,
-                'activityInstanceVariableMapping' : coverageData.activityInstanceVariableMapping ,
+                'featureName' : uuid,
+                'xml' : coverageData.bpmnModel,
+                'userTasks' : coverageData.modelUserTasks,
+                'activityInstances' : coverageData.activityInstancesFinished,
+                'executedSequenceFlows' : coverageData.sequenceFlowsFinished,
+                'asyncData' : coverageData.modelAsyncData,
+                'receiveTasks' : coverageData.modelReceiveTasks,
+                'externalTasks' : coverageData.modelExternalTasks,
+                'intermediateCatchEvents' : coverageData.modelIntermediateCatchEvents,
+                'activityInstancesStillActive' : coverageData.activityInstancesUnfinished,
+                'activityInstanceVariableMapping' : coverageData.activityInstanceVariableMapping,
                 'template': '/templates/template.html',
-                'bpmnViewer' : "..${this.localBpmnViewerPath}" ,
-                'bpmnShowDiagramJs' : "../bpmnjs/${new JsGeneration().getJsFilePath().getFileName().toString()}" ,
-                "bpmnCSS" : "../bpmnjs/${new CssGeneration().getCssFilePath().getFileName().toString()}",
-                'bpmnFontAwesome': "..${this.defaultFontAwesome}"
+                'bpmnViewer' : "../bpmnjs/${getBpmnJsViewer().getFileName().toString()}",
+                'bpmnShowDiagramJs' : "../bpmnjs/${getJsGeneration().getJsFilePath().getFileName().toString()}",
+                "bpmnCSS" : "../bpmnjs/${getCssGeneration().getCssFilePath().getFileName().toString()}",
+                'bpmnFontAwesome': "../bpmnjs/${getFontAwesomeCss().getFileName().toString()}"
         ]
 
         def binding = [
@@ -59,11 +47,42 @@ trait TemplateGeneration{
                 'jsonData': JsonOutput.toJson(coverageDataPrep)
         ]
 
-        // @TODO Cleanup to make better code.  This is too messy atm.
         String template = getClass().getResource(coverageDataPrep.template).getText()
         def engine = new SimpleTemplateEngine()
         String rendered = engine.createTemplate(template).make(binding)
 
         return rendered
+    }
+
+
+    //
+    // SETTERS AND GETTERS
+    //
+    void setFontAwesomeCss(String path){
+        this.fontAwesomeCss = Paths.get(getClass().getResource(path).toURI())
+    }
+
+    Path getFontAwesomeCss(){
+        return this.fontAwesomeCss
+    }
+
+    void setBpmnJsViewer(String path){
+        this.bpmnJsViewer = Paths.get(getClass().getResource(path).toURI())
+    }
+
+    Path getBpmnJsViewer(){
+        return this.bpmnJsViewer
+    }
+
+    void setJsGeneration(JsGeneration jsGeneration){
+        this.jsGeneration = jsGeneration
+    }
+
+    JsGeneration getJsGeneration(){
+        return this.jsGeneration
+    }
+
+    void setCssGeneration(CssGeneration cssGeneration){
+        this.cssGeneration = cssGeneration
     }
 }

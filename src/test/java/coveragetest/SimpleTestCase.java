@@ -1,6 +1,7 @@
 package coveragetest;
 
 import io.digitalstate.camunda.coverage.bpmn.CoverageBuilderJavaBridge;
+import io.digitalstate.camunda.coverage.bpmn.bpmnjs.CssGeneration;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
 import org.camunda.bpm.engine.test.Deployment;
 import org.camunda.bpm.engine.test.ProcessEngineRule;
@@ -23,6 +24,11 @@ public class SimpleTestCase {
     @Test
     @Deployment(resources = {"testProcess.bpmn"})
     public void shouldExecuteProcess() {
+        // Set a Custom CSS File:
+        // CssGeneration myCustomCSS = new CssGeneration();
+        // myCustomCSS.setCssFile("/bpmn1.css");
+        // coverageBuilder.setCssGeneration(myCustomCSS);
+
         // Given we create a new process instance
         ProcessInstance processInstance = runtimeService().startProcessInstanceByKey("testProcess");
         // Then it should be active

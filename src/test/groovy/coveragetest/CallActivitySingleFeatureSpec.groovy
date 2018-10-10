@@ -2,6 +2,7 @@ package coveragetest
 
 import io.digitalstate.camunda.coverage.bpmn.CoverageBuilder
 import io.digitalstate.camunda.coverage.bpmn.SequenceFlowHistory
+import io.digitalstate.camunda.coverage.bpmn.bpmnjs.CssGeneration
 import org.junit.ClassRule
 import spock.lang.Shared
 import spock.lang.Specification
@@ -27,6 +28,11 @@ class CallActivitySingleFeatureSpec extends Specification implements CoverageBui
     @Shared String deploymentId
 
     def setupSpec(){
+
+//        CssGeneration myCss = new CssGeneration()
+//        myCss.setCssFile('/bpmn1.css')
+//        setCssGeneration(myCss)
+
         def deployment = repositoryService().createDeployment()
                 .addInputStream(getSequenceFlowFileName(), getSequenceFlowListenerScript())
                 .addModelInstance('CallActivityCoverage.bpmn', addSequenceFlowListeners('bpmn/CallActivityCoverage.bpmn'))
@@ -89,6 +95,7 @@ class CallActivitySingleFeatureSpec extends Specification implements CoverageBui
     }
 
     def cleanupSpec() {
+        saveCoverageSnapshots()
         saveCoverageSnapshots()
 
         repositoryService().deleteDeployment(deploymentId,

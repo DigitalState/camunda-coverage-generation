@@ -7,19 +7,15 @@ import java.nio.file.Paths
 
 class CssGeneration {
 
-    String defaultCssFile = '/templates/bpmn.css'
-    Path cssFilePath = Paths.get(getClass().getResource(this.defaultCssFile).toURI())
+    private String defaultCssFile = '/templates/bpmn.css'
+    private Path cssFilePath = Paths.get(getClass().getResource(this.defaultCssFile).toURI())
 
     void setCssFile(String customPath){
-        this.cssFilePath = Paths.get(customPath)
+        this.cssFilePath = Paths.get(getClass().getResource(customPath.toString()).toURI())
     }
 
     Path getCssFilePath(){
         return this.cssFilePath
-    }
-
-    String getCssFileName(){
-        return this.cssFilePath.getFileName().toString()
     }
 
     String generateCss(){
