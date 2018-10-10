@@ -1,6 +1,7 @@
 package io.digitalstate.camunda.coverage.bpmn
 
-import org.apache.commons.io.FileUtils
+import net.lingala.zip4j.core.ZipFile
+import org.apache.commons.io.FilenameUtils
 import org.camunda.bpm.engine.history.HistoricDetail
 import org.camunda.bpm.engine.impl.persistence.entity.HistoricDetailVariableInstanceUpdateEntity
 
@@ -59,6 +60,10 @@ trait CoverageBuilder{
         String bpmnJsViewerFileName = templateGeneration.getBpmnJsViewerFileName()
         String bpmnJsViewerFile = templateGeneration.getBpmnJsViewerFile()
 
+        String fontsZipPath = '/bpmnjs/font-awesome.zip'
+        String fontsZipFileName = FilenameUtils.getName(fontsZipPath)
+        InputStream fontsZip = getClass().getResourceAsStream(fontsZipPath)
+
         treeBuilder {
             "${buildDir}" {
                 "bpmn-coverage" {
@@ -66,18 +71,20 @@ trait CoverageBuilder{
                         file(jsFileName, JsFile)
                         file(cssFileName, cssFile)
                         file(bpmnJsViewerFileName, bpmnJsViewerFile)
+                        file(fontsZipFileName, fontsZip.getBytes())
                     }
                 }
             }
         }
 
-        //Copy fonts folder
-        String fontsFolderPath = '/bpmnjs/font-awesome/'
-//        URL codeurl = getClass().getProtectionDomain().getCodeSource().getLocation()
-//        File fontsFolderSource = new File("jar:${getClass().getProtectionDomain().getCodeSource().getLocation()}!${fontsFolderPath}");
-        File fontsFolderSource = new File(getClass().getResource(fontsFolderPath).toURI())
-        File fontsFolderDestination = Paths.get("${buildDir}/bpmn-coverage/bpmnjs/font-awesome").toFile()
-        FileUtils.copyDirectory(fontsFolderSource, fontsFolderDestination, false)
+        // Setup the Font-Awesome folder
+        File fontsZipLocal = Paths.get("${buildDir}/bpmn-coverage/bpmnjs/font-awesome.zip").toFile()
+        Path fontsFolderDestination = Paths.get("${buildDir}/bpmn-coverage/bpmnjs/font-awesome")
+
+        ZipFile fontZip = new ZipFile(fontsZipLocal)
+        fontZip.extractAll(fontsFolderDestination.toString())
+        // Deletes the zip file when completed.
+        fontsZipLocal.delete()
 
         // Generate coverageData
         data.eachWithIndex { key, value, index ->

@@ -13,7 +13,7 @@ class TemplateGeneration {
 
     String defaultFontAwesomeCss = "/bpmnjs/font-awesome/css/font-awesome.min.css"
     String fontAwesomeCssFileName = FilenameUtils.getName(this.defaultFontAwesomeCss)
-    String fontAwesomeCssFile = getClass().getResourceAsStream(this.defaultFontAwesomeCss).getText('UTF-8')
+//    String fontAwesomeCssFile = getClass().getResourceAsStream(this.defaultFontAwesomeCss).getText('UTF-8')
 
     String defaultTemplate = '/templates/template.html'
     String templateFileName = FilenameUtils.getName(this.defaultTemplate)
@@ -81,12 +81,12 @@ class TemplateGeneration {
         this.cssGeneration = cssGeneration
     }
 
-    String getFontAwesomeCssFile(){
-        return this.fontAwesomeCssFile
-    }
-    void setFontAwesomeCssFile(InputStream inputStream){
-        this.fontAwesomeCssFile = inputStream
-    }
+//    String getFontAwesomeCssFile(){
+//        return this.fontAwesomeCssFile
+//    }
+//    void setFontAwesomeCssFile(InputStream inputStream){
+//        this.fontAwesomeCssFile = inputStream
+//    }
 
     String getFontAwesomeCssFileName(){
         return this.fontAwesomeCssFileName
