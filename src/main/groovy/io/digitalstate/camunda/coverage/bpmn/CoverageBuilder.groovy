@@ -25,7 +25,7 @@ import java.nio.file.Paths
 import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.historyService
 import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.repositoryService
 
-    // @TODO Rebuild Trait as cleaner implementation.  Too much code is in here
+// @TODO Rebuild Trait as cleaner implementation.  Too much code is in here
 
 trait CoverageBuilder{
 
@@ -274,4 +274,12 @@ trait CoverageBuilder{
     JsGeneration getJsGeneration(){
         return jsGeneration
     }
+
+    HashMap<String, CoverageData> getCoverageSnapshots(){
+        return coverageSnapshots
     }
+
+    void setCoverageSnapshots(HashMap<String, CoverageData> coverageData){
+        coverageSnapshots = coverageData
+    }
+}
